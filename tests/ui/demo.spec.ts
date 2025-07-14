@@ -37,20 +37,6 @@ test.describe('Demo Test Suite', () => {
     logger.info('Demo test completed successfully');
   });
 
-  test('should demonstrate screenshot capabilities', async ({ page, screenshotHelper, allureHelper }) => {
-    await allureHelper.addDescription('Test to demonstrate screenshot capture');
-    await allureHelper.addTags(['screenshot', 'visual', 'demo']);
-    
-    await page.goto('https://example.com');
-    
-    // Take a screenshot
-    const screenshotPath = await screenshotHelper.takeScreenshot('example-page');
-    await allureHelper.addScreenshotAttachment(screenshotPath, 'Example Page Screenshot');
-    
-    // Verify screenshot was taken
-    expect(screenshotPath).toBeTruthy();
-  });
-
   test('should demonstrate performance monitoring', async ({ page, performanceHelper, allureHelper }) => {
     await allureHelper.addDescription('Test to demonstrate performance monitoring');
     await allureHelper.addTags(['performance', 'monitoring', 'demo']);
