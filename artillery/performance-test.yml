@@ -1,0 +1,312 @@
+config:
+  target: '{{ $processEnvironment.BASE_URL || "http://localhost:3000" }}'
+  phases:
+    - duration: 60
+      arrivalRate: 1
+      name: "Warm up"
+    - duration: 120
+      arrivalRate: 5
+      rampTo: 10
+      name: "Ramp up load"
+    - duration: 300
+      arrivalRate: 10
+      name: "Sustained load"
+    - duration: 120
+      arrivalRate: 10
+      rampTo: 2
+      name: "Ramp down"
+  engines:
+    playwright:
+      launchOptions:
+        headless: true
+        args:
+          - '--no-sandbox'
+          - '--disable-dev-shm-usage'
+          - '--disable-gpu'
+      contextOptions:
+        viewport:
+          width: 1920
+          height: 1080
+        ignoreHTTPSErrors: true
+        acceptDownloads: false
+      aggregateByName: true
+  processor: ./artillery-processor.js
+  variables:
+    search_terms:
+      - laptop
+      - phone
+      - tablet
+      - headphones
+      - camera
+      - monitor
+      - keyboard
+      - mouse
+      - speaker
+      - watch
+    user_agents:
+      - "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+      - "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+      - "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+  plugins:
+    expect: {}
+    metrics-by-endpoint:
+      useOnlyRequestNames: true
+    publish-metrics:
+      - type: prometheus
+        pushgateway: 'http://localhost:9091'
+        tags:
+          - "testid:artillery_load_test"
+          - "environment:{{ $processEnvironment.NODE_ENV || 'development' }}"
+
+scenarios:
+  - name: "Homepage Load Test"
+    weight: 30
+    engine: playwright
+    testFunction: "homepageLoadTest"
+    
+  - name: "Product Search Test"
+    weight: 25
+    engine: playwright
+    testFunction: "productSearchTest"
+    
+  - name: "User Registration Test"
+    weight: 20
+    engine: playwright
+    testFunction: "userRegistrationTest"
+    
+  - name: "Product Details Test"
+    weight: 15
+    engine: playwright
+    testFunction: "productDetailsTest"
+    
+  - name: "Cart Operations Test"
+    weight: 10
+    engine: playwright
+    testFunction: "cartOperationsTest"
+
+# Artillery functions for Playwright engine
+functions:
+  homepageLoadTest: |
+    async function homepageLoadTest(page, vuContext, events) {
+      const startTime = Date.now();
+      
+      try {
+        // Navigate to homepage
+        await page.goto('/');
+        await page.waitForLoadState('networkidle');
+        
+        // Verify page elements
+        await page.waitForSelector('[data-testid="logo"]', { timeout: 5000 });
+        await page.waitForSelector('[data-testid="navigation-menu"]', { timeout: 5000 });
+        await page.waitForSelector('[data-testid="main-content"]', { timeout: 5000 });
+        
+        // Measure performance
+        const loadTime = Date.now() - startTime;
+        events.emit('counter', 'homepage.load_time', loadTime);
+        events.emit('counter', 'homepage.success', 1);
+        
+        // Take screenshot for analysis
+        await page.screenshot({ path: `artillery-screenshots/homepage-${Date.now()}.png` });
+        
+      } catch (error) {
+        events.emit('counter', 'homepage.error', 1);
+        console.error('Homepage load test failed:', error);
+      }
+    }
+
+  productSearchTest: |
+    async function productSearchTest(page, vuContext, events) {
+      const startTime = Date.now();
+      
+      try {
+        // Navigate to homepage
+        await page.goto('/');
+        await page.waitForLoadState('networkidle');
+        
+        // Perform search
+        const searchTerm = vuContext.vars.search_terms[Math.floor(Math.random() * vuContext.vars.search_terms.length)];
+        await page.fill('[data-testid="search-input"]', searchTerm);
+        await page.click('[data-testid="search-button"]');
+        await page.waitForLoadState('networkidle');
+        
+        // Verify search results
+        await page.waitForSelector('[data-testid="product-list"]', { timeout: 10000 });
+        
+        // Count results
+        const productCount = await page.locator('[data-testid="product-card"]').count();
+        events.emit('counter', 'search.results_count', productCount);
+        
+        const searchTime = Date.now() - startTime;
+        events.emit('counter', 'search.response_time', searchTime);
+        events.emit('counter', 'search.success', 1);
+        
+      } catch (error) {
+        events.emit('counter', 'search.error', 1);
+        console.error('Product search test failed:', error);
+      }
+    }
+
+  userRegistrationTest: |
+    async function userRegistrationTest(page, vuContext, events) {
+      const startTime = Date.now();
+      
+      try {
+        // Navigate to homepage
+        await page.goto('/');
+        await page.waitForLoadState('networkidle');
+        
+        // Generate random user data
+        const randomId = Math.floor(Math.random() * 10000);
+        const userData = {
+          username: `testuser${randomId}`,
+          email: `test${randomId}@example.com`,
+          password: 'TestPassword123!',
+          firstName: 'Test',
+          lastName: 'User'
+        };
+        
+        // Navigate to registration (if register button exists)
+        try {
+          await page.click('[data-testid="register-button"]');
+          await page.waitForSelector('[data-testid="register-form"]', { timeout: 5000 });
+          
+          // Fill registration form
+          await page.fill('[data-testid="username-input"]', userData.username);
+          await page.fill('[data-testid="email-input"]', userData.email);
+          await page.fill('[data-testid="password-input"]', userData.password);
+          await page.fill('[data-testid="firstName-input"]', userData.firstName);
+          await page.fill('[data-testid="lastName-input"]', userData.lastName);
+          
+          // Submit registration
+          await page.click('[data-testid="register-submit-button"]');
+          await page.waitForLoadState('networkidle');
+          
+          const registrationTime = Date.now() - startTime;
+          events.emit('counter', 'registration.response_time', registrationTime);
+          events.emit('counter', 'registration.success', 1);
+          
+        } catch (error) {
+          // Registration form might not exist, that's okay
+          events.emit('counter', 'registration.skipped', 1);
+        }
+        
+      } catch (error) {
+        events.emit('counter', 'registration.error', 1);
+        console.error('User registration test failed:', error);
+      }
+    }
+
+  productDetailsTest: |
+    async function productDetailsTest(page, vuContext, events) {
+      const startTime = Date.now();
+      
+      try {
+        // Navigate to homepage
+        await page.goto('/');
+        await page.waitForLoadState('networkidle');
+        
+        // Search for products first
+        await page.fill('[data-testid="search-input"]', 'laptop');
+        await page.click('[data-testid="search-button"]');
+        await page.waitForLoadState('networkidle');
+        
+        // Click on first product
+        await page.waitForSelector('[data-testid="product-card"]', { timeout: 10000 });
+        const productCards = await page.locator('[data-testid="product-card"]');
+        const productCount = await productCards.count();
+        
+        if (productCount > 0) {
+          await productCards.first().click();
+          await page.waitForLoadState('networkidle');
+          
+          // Verify product details page
+          await page.waitForSelector('[data-testid="product-title"]', { timeout: 5000 });
+          await page.waitForSelector('[data-testid="product-price"]', { timeout: 5000 });
+          
+          const detailsTime = Date.now() - startTime;
+          events.emit('counter', 'product_details.response_time', detailsTime);
+          events.emit('counter', 'product_details.success', 1);
+        } else {
+          events.emit('counter', 'product_details.no_products', 1);
+        }
+        
+      } catch (error) {
+        events.emit('counter', 'product_details.error', 1);
+        console.error('Product details test failed:', error);
+      }
+    }
+
+  cartOperationsTest: |
+    async function cartOperationsTest(page, vuContext, events) {
+      const startTime = Date.now();
+      
+      try {
+        // Navigate to homepage
+        await page.goto('/');
+        await page.waitForLoadState('networkidle');
+        
+        // Search for products
+        await page.fill('[data-testid="search-input"]', 'phone');
+        await page.click('[data-testid="search-button"]');
+        await page.waitForLoadState('networkidle');
+        
+        // Add product to cart
+        await page.waitForSelector('[data-testid="add-to-cart"]', { timeout: 10000 });
+        await page.click('[data-testid="add-to-cart"]');
+        
+        // Wait for cart update
+        await page.waitForTimeout(2000);
+        
+        // Open cart
+        await page.click('[data-testid="cart-icon"]');
+        await page.waitForSelector('[data-testid="cart-modal"]', { timeout: 5000 });
+        
+        // Verify cart items
+        const cartItems = await page.locator('[data-testid="cart-items"]');
+        const itemCount = await cartItems.count();
+        
+        events.emit('counter', 'cart.items_count', itemCount);
+        
+        const cartTime = Date.now() - startTime;
+        events.emit('counter', 'cart.response_time', cartTime);
+        events.emit('counter', 'cart.success', 1);
+        
+      } catch (error) {
+        events.emit('counter', 'cart.error', 1);
+        console.error('Cart operations test failed:', error);
+      }
+    }
+
+# Custom metrics configuration
+metrics:
+  - name: "homepage_load_time"
+    unit: "ms"
+    
+  - name: "search_response_time"
+    unit: "ms"
+    
+  - name: "registration_response_time"
+    unit: "ms"
+    
+  - name: "product_details_response_time"
+    unit: "ms"
+    
+  - name: "cart_response_time"
+    unit: "ms"
+
+# Performance thresholds
+thresholds:
+  - metric: "http.response_time"
+    threshold: 5000
+    
+  - metric: "http.response_time.p95"
+    threshold: 8000
+    
+  - metric: "http.response_time.p99"
+    threshold: 10000
+    
+  - metric: "vusers.failed"
+    threshold: 5
+    
+  - metric: "errors.ratio"
+    threshold: 0.05

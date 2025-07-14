@@ -1,0 +1,6 @@
+{
+  "loadTime": 3000,
+  "firstContentfulPaint": 2000,
+  "largestContentfulPaint": 4000,
+  "cumulativeLayoutShift": 0.1
+}

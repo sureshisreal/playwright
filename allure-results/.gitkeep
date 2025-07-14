@@ -1,0 +1,2 @@
+# This file ensures the allure-results directory exists in version control
+# Allure test results will be generated in this directory

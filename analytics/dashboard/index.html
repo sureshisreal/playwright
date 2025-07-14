@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>📊 Test Analytics Dashboard</title>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                    Roboto, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                color: #2c3e50;
+            }
+
+            .container {
+                max-width: 1400px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+
+            .header {
+                text-align: center;
+                color: white;
+                margin-bottom: 40px;
+                padding: 40px 0;
+            }
+
+            .header h1 {
+                font-size: 3.5em;
+                margin-bottom: 10px;
+                font-weight: 300;
+            }
+
+            .header p {
+                font-size: 1.2em;
+                opacity: 0.9;
+            }
+
+            .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 25px;
+                margin-bottom: 40px;
+            }
+
+            .stat-card {
+                background: white;
+                padding: 30px;
+                border-radius: 15px;
+                box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+                text-align: center;
+                transition: transform 0.3s ease;
+            }
+
+            .stat-card:hover {
+                transform: translateY(-5px);
+            }
+
+            .stat-icon {
+                font-size: 3em;
+                margin-bottom: 15px;
+            }
+
+            .stat-number {
+                font-size: 2.8em;
+                font-weight: bold;
+                color: #2c3e50;
+                margin-bottom: 10px;
+            }
+
+            .stat-label {
+                color: #7f8c8d;
+                font-size: 1.1em;
+                font-weight: 500;
+            }
+
+            .stat-trend {
+                margin-top: 10px;
+                padding: 5px 15px;
+                border-radius: 20px;
+                font-size: 0.9em;
+                font-weight: 500;
+            }
+
+            .trend-up {
+                background: #d4edda;
+                color: #155724;
+            }
+
+            .trend-down {
+                background: #f8d7da;
+                color: #721c24;
+            }
+
+            .trend-stable {
+                background: #e2e3e5;
+                color: #383d41;
+            }
+
+            .charts-section {
+                background: white;
+                padding: 40px;
+                border-radius: 15px;
+                box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+                margin-bottom: 40px;
+            }
+
+            .charts-section h2 {
+                color: #2c3e50;
+                margin-bottom: 30px;
+                font-size: 2em;
+                text-align: center;
+            }
+
+            .charts-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+                gap: 40px;
+            }
+
+            .chart-container {
+                position: relative;
+                height: 400px;
+            }
+
+            .issues-section {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+                gap: 30px;
+                margin-bottom: 40px;
+            }
+
+            .issues-card {
+                background: white;
+                padding: 30px;
+                border-radius: 15px;
+                box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+            }
+
+            .issues-card h3 {
+                color: #2c3e50;
+                margin-bottom: 20px;
+                font-size: 1.5em;
+            }
+
+            .issue-item {
+                padding: 15px;
+                border-left: 4px solid #e74c3c;
+                background: #f8f9fa;
+                margin-bottom: 15px;
+                border-radius: 5px;
+            }
+
+            .issue-name {
+                font-weight: bold;
+                color: #2c3e50;
+                margin-bottom: 5px;
+            }
+
+            .issue-details {
+                color: #7f8c8d;
+                font-size: 0.9em;
+            }
+
+            .actions-section {
+                background: white;
+                padding: 30px;
+                border-radius: 15px;
+                box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+                text-align: center;
+            }
+
+            .btn {
+                display: inline-block;
+                padding: 15px 30px;
+                margin: 10px;
+                background: #3498db;
+                color: white;
+                text-decoration: none;
+                border-radius: 8px;
+                font-weight: 500;
+                transition: background 0.3s ease;
+            }
+
+            .btn:hover {
+                background: #2980b9;
+            }
+
+            .btn-success {
+                background: #27ae60;
+            }
+
+            .btn-success:hover {
+                background: #219a52;
+            }
+
+            .btn-warning {
+                background: #f39c12;
+            }
+
+            .btn-warning:hover {
+                background: #e67e22;
+            }
+
+            .footer {
+                text-align: center;
+                color: white;
+                padding: 40px 0;
+                opacity: 0.8;
+            }
+
+            @media (max-width: 768px) {
+                .stats-grid {
+                    grid-template-columns: 1fr;
+                }
+
+                .charts-grid {
+                    grid-template-columns: 1fr;
+                }
+
+                .issues-section {
+                    grid-template-columns: 1fr;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>📊 Test Analytics Dashboard</h1>
+                <p>Comprehensive testing insights and performance metrics</p>
+                <p>Last updated: 7/14/2025, 6:05:26 PM</p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">📈</div>
+                    <div class="stat-number">15</div>
+                    <div class="stat-label">Total Test Runs</div>
+                    <div class="stat-trend trend-up">+12% this week</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-number">84.2%</div>
+                    <div class="stat-label">Average Pass Rate</div>
+                    <div class="stat-trend trend-up">+5.2% improvement</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">⚠️</div>
+                    <div class="stat-number">2</div>
+                    <div class="stat-label">Flaky Tests</div>
+                    <div class="stat-trend trend-down">-3 from last week</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">⚡</div>
+                    <div class="stat-number">2800ms</div>
+                    <div class="stat-label">Avg Load Time</div>
+                    <div class="stat-trend trend-stable">Stable</div>
+                </div>
+            </div>
+
+            <div class="charts-section">
+                <h2>📊 Performance Trends</h2>
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <canvas id="passRateChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="issues-section">
+                <div class="issues-card">
+                    <h3>🔥 Flaky Tests</h3>
+
+                    <div class="issue-item">
+                        <div class="issue-name">
+                            should handle loading states
+                        </div>
+                        <div class="issue-details">
+                            Suite: UI Tests | Flakiness: 25% | Runs: 8
+                        </div>
+                    </div>
+
+                    <div class="issue-item">
+                        <div class="issue-name">
+                            should measure network performance
+                        </div>
+                        <div class="issue-details">
+                            Suite: Performance Tests | Flakiness: 16.7% | Runs:
+                            12
+                        </div>
+                    </div>
+                </div>
+
+                <div class="issues-card">
+                    <h3>🐌 Performance Issues</h3>
+                    <div class="issue-item">
+                        <div class="issue-name">Slow Load Times</div>
+                        <div class="issue-details">
+                            Average: 2800ms | Target: <2500ms
+                        </div>
+                    </div>
+                    <div class="issue-item">
+                        <div class="issue-name">Large Content Paint</div>
+                        <div class="issue-details">
+                            Average: 2400ms | Target: <2500ms
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions-section">
+                <h2>🔧 Quick Actions</h2>
+                <a href="#" class="btn" onclick="alert('Feature coming soon!')"
+                    >📈 View Detailed Reports</a
+                >
+                <a
+                    href="#"
+                    class="btn btn-success"
+                    onclick="alert('Feature coming soon!')"
+                    >📊 Export Data</a
+                >
+                <a
+                    href="#"
+                    class="btn btn-warning"
+                    onclick="alert('Feature coming soon!')"
+                    >⚡ Run Performance Scan</a
+                >
+            </div>
+
+            <div class="footer">
+                <p>
+                    📱 Mobile Testing | ♿ Accessibility Testing | ⚡
+                    Performance Monitoring
+                </p>
+                <p>Powered by Playwright Test Automation Framework</p>
+            </div>
+        </div>
+
+        <script>
+            // Chart.js configuration
+            const chartColors = {
+                primary: "#3498db",
+                success: "#27ae60",
+                warning: "#f39c12",
+                danger: "#e74c3c",
+            };
+
+            // Pass Rate Chart
+            const passRateCtx = document
+                .getElementById("passRateChart")
+                .getContext("2d");
+            new Chart(passRateCtx, {
+                type: "line",
+                data: {
+                    labels: ["7/7/2025", "7/11/2025", "7/14/2025"],
+                    datasets: [
+                        {
+                            label: "Pass Rate (%)",
+                            data: [78.5, 85.2, 89.1],
+                            borderColor: chartColors.success,
+                            backgroundColor: chartColors.success + "20",
+                            fill: true,
+                            tension: 0.4,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: "Test Pass Rate Over Time",
+                        },
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                        },
+                    },
+                },
+            });
+
+            // Performance Chart
+            const performanceCtx = document
+                .getElementById("performanceChart")
+                .getContext("2d");
+            new Chart(performanceCtx, {
+                type: "bar",
+                data: {
+                    labels: ["Load Time", "FCP", "LCP", "CLS", "TTI"],
+                    datasets: [
+                        {
+                            label: "Performance Metrics",
+                            data: [2800, 1200, 2400, 80, 3100],
+                            backgroundColor: [
+                                chartColors.primary,
+                                chartColors.success,
+                                chartColors.warning,
+                                chartColors.success,
+                                chartColors.danger,
+                            ],
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: "Performance Metrics Overview",
+                        },
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                        },
+                    },
+                },
+            });
+
+            // Auto-refresh functionality
+            setInterval(() => {
+                const lastUpdated = document.querySelector(
+                    ".header p:last-child",
+                );
+                if (lastUpdated) {
+                    lastUpdated.textContent =
+                        "Last updated: " + new Date().toLocaleString();
+                }
+            }, 60000); // Update every minute
+        </script>
+    </body>
+</html>
